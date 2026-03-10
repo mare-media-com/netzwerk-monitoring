@@ -119,7 +119,7 @@ Raspberry Pi
 
 # ⚙️ Installation
 
-## 1️⃣ Repository klonen
+## Repository klonen
 
 ```
 git clone https://github.com/USERNAME/netzwerk-monitoring.git
@@ -128,10 +128,20 @@ cd netzwerk-monitoring
 
 ---
 
-## 2️⃣ Python Abhängigkeiten installieren
+## Python Abhängigkeiten installieren
 
 ```
-pip install flask pytz
+pip install -r requirements.txt
+```
+
+---
+
+## Datei secrets.js
+
+```
+/static/config/secrets.example
+secrets.example umbenennen in secrets.js
+MQTT-IP und MQTT-Port eintragen
 ```
 
 ---
