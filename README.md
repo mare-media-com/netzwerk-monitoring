@@ -140,7 +140,7 @@ pip install -r requirements.txt
 
 ```
 /static/config/secrets.example
-secrets,example umbenennen in secrets.js
+secrets.example umbenennen in secrets.js
 MQTT-IP und MQTT-Port eintragen
 ```
 
