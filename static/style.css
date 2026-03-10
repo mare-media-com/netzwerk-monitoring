@@ -1,0 +1,240 @@
+body {
+    font-family: system-ui, monospace;
+    background: #111;
+    color: #eee;
+    padding: 20px;
+}
+
+h1, h2 {
+    color: #6cf;
+}
+
+h1 {
+    margin-bottom: 20px;
+}
+
+/* Überschrift und MQTT-Werte nebeneinander */
+h1.header {
+  display: flex;
+  align-items: center; /* vertikale Ausrichtung */
+  justify-content: space-between; /* Überschrift links, Werte rechts */
+  font-size: 2em; /* Überschriftgröße */
+  margin-bottom: 20px;
+}
+
+.mqtt-values {
+  display: flex;
+  gap: 15px;
+  font-size: 0.7em;
+  padding: 5px 25px;
+  background-color: #1a1a1a;
+  border-radius: 10px;
+}
+
+.status-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+}
+
+.status-led {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: grey;
+  display: inline-block;
+  box-shadow: 0 0 4px rgba(0,0,0,0.4);
+}
+
+.led-green {
+  background-color: #2ecc71;
+}
+
+.led-red {
+  background-color: #e74c3c;
+}
+
+.led-blue {
+  background-color: #3498db;
+}
+
+h2 {
+    margin-top: 40px;
+}
+
+label {
+    margin-left: -5px;
+    font-weight: bold;
+}
+
+.card {
+    background: #1a1a1a;
+    border-radius: 8px;
+    padding: 15px;
+    border-left: 6px solid #666;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 140px;
+    transition: border-color 0.3s;
+}
+
+.card.ok {
+    border-left-color: #2ecc71;  /* Grün für OK */
+}
+
+.card.fail {
+    border-left-color: #e74c3c;  /* Rot für FAIL */
+}
+
+.card h3 {
+    margin: 0 0 10px 0;
+    color: #ccc;
+    font-size: 1.1em;
+}
+
+.card p {
+    font-size: 1.5em;
+    margin: 0 0 10px 0;
+}
+
+.card small {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.9em;
+}
+
+.stats {
+    margin-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 6px;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+}
+
+.progress {
+    width: 100%;
+    height: 10px;
+    background: #2a2a2a;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    background: #4da3ff;
+    transition: width 0.4s ease;
+}
+
+.progress-container {
+    margin-top: 10px;
+    text-align: left;
+    font-size: 12px;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+    margin-left: 4px;
+}
+
+/* Online / Warn / Offline Text */
+.ok {
+    color: #2ecc71;
+}
+
+.fail {
+    color: #e74c3c;
+}
+
+.warn {
+    color: #f0c674;
+}
+
+/* ------------------------
+   Logs / Timeline
+   ------------------------ */
+.muted {
+    color: #aaa;
+    font-size: 1.0em;
+}
+
+.statusanzeige {
+    font-size: 1.2em;
+}
+.duration {
+    display: block;
+    margin-top: 2px;
+}
+
+/* Timeline */
+.timeline {
+    margin-top: 6px;
+    background: #000;
+    padding: 10px;
+    border-left: 3px solid #6cf;
+    max-height: 370px;
+    overflow-y: auto;
+}
+
+.event {
+    font-family: monospace;
+/*     padding: 4px 0; */
+    border-bottom: 1px solid #222;
+    font-size: 1.0em;
+    padding: 2px 4px;
+}
+
+.event:last-child {
+    border-bottom: none;
+}
+
+.event.ok {
+    color: #8ae234;   /* grün */
+}
+
+.event.fail {
+    color: #ef2929;   /* rot */
+}
+
+.event.ram_warn {
+    color: #ffc107;   /* GELB */
+}
+
+.event.ram_critical {
+    color: #ff5733;   /* ROT */
+}
+
+/* ------------------------
+   Zusatz: Einheitlicher Ausfallbereich
+   ------------------------ */
+.card small.muted {
+    line-height: 1.3em;
+}
+
+.card small.muted br {
+    content: "";
+    margin-bottom: 2px;
+}
+
+/* Latenzfarben */
+.latency {
+    font-weight: bold;
+}
+
+.latency.green {
+    color: #33ff57; }
+.latency.yellow {
+    color: #ffcc33; }
+.latency.red {
+    color: #ff5733; }
