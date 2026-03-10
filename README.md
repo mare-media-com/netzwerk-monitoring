@@ -223,9 +223,7 @@ Farbschema:
 
 # 📜 Lizenz
 
-Dieses Projekt ist ein persönliches Home-Lab Monitoring Tool.
-
-Verwendung und Anpassung für private Projekte ist erlaubt.
+Dieses Projekt steht unter der MIT-Lizenz. Du darfst den Code frei verwenden, kopieren und anpassen.
 
 ---
 
