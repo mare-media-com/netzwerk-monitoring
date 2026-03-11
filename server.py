@@ -11,6 +11,12 @@ from zoneinfo import ZoneInfo
 from collections import defaultdict, deque
 import platform
 import requests
+from config import (
+    RASPIBERND_IP,
+    FRITZBOX_IP,
+    RASPI4B_IP,
+    PING_TARGETS
+)
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
@@ -27,11 +33,7 @@ LOG_PATH = os.path.join(LOG_DIR, "monitor.log")
 # =====================
 # KONFIGURATION
 # =====================
-FRITZBOX_IP = "192.168.178.1"
-RASPIBERND_IP = "192.168.178.110"
-RPIMONITOR_URL = f"http://{RASPIBERND_IP}:8888/status.json"  # angepasst
-PING_TARGETS = ["1.1.1.1", "8.8.8.8", "9.9.9.9"]
-RASPI4B_IP = "192.168.178.53"
+
 TIMEOUT = 2
 AGENT_TIMEOUT = 90  # Sekunden
 LOCAL_TZ = ZoneInfo("Europe/Berlin")
@@ -170,12 +172,7 @@ def check_raspibernd_limits(cpu_temp, ram, sd):
 # =====================
 # LOG- & TIMELINE-FUNKTIONEN
 # =====================
-# def get_log_files():
-#     """Alle Log-Dateien im logs-Ordner, älteste zuerst"""
-#     return sorted(
-#         glob.glob(os.path.join(LOG_DIR, "monitor.log*")),
-#         key=lambda f: (f.endswith(".log"), f)
-#     )
+
 def get_log_files():
     files = glob.glob(os.path.join(LOG_DIR, "monitor.log*"))
 
@@ -341,7 +338,7 @@ def format_duration(delta):
 # =====================
 def get_raspibernd_stats():
     try:
-        r = requests.get("http://192.168.178.110:8888/dynamic.json", timeout=5)
+        r = requests.get(f"http://{RASPIBERND_IP}:8888/dynamic.json", timeout=5)
         data = r.json()
 
         # =====================
