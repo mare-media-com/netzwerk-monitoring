@@ -1,7 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Netzwerk-Monitoring</title>
+    <title>
+        {% if IS_DEV %}
+            Entwicklung Netzwerk-Monitor
+        {% else %}
+            Netzwerk-Monitor
+        {% endif %}
+    </title>
     <!-- <meta http-equiv="refresh" content="10"> -->
     <link rel="stylesheet" href="/static/style.css">
     <link rel="icon" type="image/png" href="/static/favicon.png">
@@ -10,17 +16,13 @@
 </head>
 <body>
 
-<!-- <h1 class="header">
-  🌐 Netzwerk-Monitoring
-  <span class="mqtt-values">
-    <span>Raumklima im Büro: </span>
-    <span id="temp-display" class="mqtt-value">🌡️ -- °C</span>
-    <span id="hum-display" class="mqtt-value">💧 -- %</span>
-  </span>
-</h1> -->
-
 <h1 class="header">
   🌐 Netzwerk-Monitoring
+  {% if IS_DEV %}
+    <div class="test-banner">
+    ⚠️ Entwicklungsumgebung – nicht produktiv ⚠️
+    </div>
+  {% endif %}  
   <span class="mqtt-values">
     <span>Raumklima im Büro: </span>
 

@@ -66,10 +66,6 @@ Das Webinterface aktualisiert sich automatisch:
 
 ohne Seiten-Reload.
 
----
-
-# 🖥 Beispiel Dashboard
-
 Das Dashboard zeigt:
 
 * Netzwerkstatus
@@ -145,7 +141,9 @@ pip install -r requirements.txt
 
 ---
 
-## Datei secrets.js
+## Individualisierung
+
+### Datei secrets.js
 
 ```
 /static/config/secrets.example kopieren/umbenennen in: secrets.js
@@ -154,7 +152,7 @@ MQTT-IP und MQTT-Port eintragen
 
 ---
 
-## Datei config.py
+### Datei config.py
 
 ```
 /config.example kopieren/umbenennen in: config.py
@@ -163,7 +161,7 @@ Daten der zu überwachenden Einheiten eintragen
 
 ---
 
-## Logrotate einrichten
+### Logrotate einrichten
 
 Falls noch nicht vorhanden:
 ```
@@ -209,7 +207,7 @@ sudo logrotate -f /etc/logrotate.d/netzwerk-monitor
 ```
 ---
 
-## 3️⃣ Server starten
+## Server starten
 
 ```
 python3 server.py
@@ -221,11 +219,13 @@ Docker-Container erstellen und starten
 
 Das Dashboard ist anschließend erreichbar unter:
 
+Entwicklungsumgebung (.venv)
+
 ```
-http://localhost:5000
+http://localhost:5001
 ```
 
-oder im Netzwerk z.B.:
+oder Produktiv im Netzwerk z.B.:
 
 ```
 http://<raspberrypi>:5000

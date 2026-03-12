@@ -6,6 +6,7 @@ import logging
 from threading import Thread
 import time
 import os
+import sys
 import glob
 from zoneinfo import ZoneInfo
 from collections import defaultdict, deque
@@ -19,6 +20,23 @@ from config import (
 )
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
+# =====================
+# PORT AUTOMATISCH BESTIMMEN
+# =====================
+
+# Prüfen, ob wir in einer virtuellen Umgebung arbeiten
+# sys.prefix zeigt auf das .venv-Verzeichnis, wenn aktiviert
+if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
+    # Lokale Entwicklung in .venv → Port 5001
+    PORT = 5001
+    IS_DEV = True
+else:
+    # Container / Prod → Port 5000
+    PORT = 5000
+    IS_DEV = False
+
+print(f"Starte Flask auf Port {PORT} ({'Entwicklung' if IS_DEV else 'Produktiv'})")
 
 # =====================
 # SYSTEM & PFADE
@@ -377,6 +395,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def index():
+   
     logs = read_recent_logs()
     server_timeline = read_server_timeline()
 
@@ -418,7 +437,9 @@ def index():
 
         raspibernd_cpu=status["raspibernd"]["cpu_temp"],
         raspibernd_ram=status["raspibernd"]["ram"],
-        raspibernd_sd=status["raspibernd"]["sd"]
+        raspibernd_sd=status["raspibernd"]["sd"],
+
+        IS_DEV=IS_DEV
     )
 
 @app.route("/api/status")
@@ -577,5 +598,6 @@ def background_checks():
         time.sleep(30)
 
 if __name__ == "__main__":
+    from threading import Thread
     Thread(target=background_checks, daemon=True).start()
-    app.run(host="0.0.0.0", port=5000, debug=True, use_reloader=False)
+    app.run(host="0.0.0.0", port=PORT, debug=True, use_reloader=False)
