@@ -128,13 +128,19 @@ label {
     color: #ff5733; 
 }
 
-.mqtt-values {
+.mqtt-valueblock {
   display: flex;
   gap: 15px;
   font-size: 0.7em;
   padding: 5px 25px;
   background-color: #1a1a1a;
   border-radius: 10px;
+}
+
+.mqtt-values {
+    color:#fff;
+    /* font-family: monospace; */
+    /* font-weight: 600; */
 }
 
 .muted {

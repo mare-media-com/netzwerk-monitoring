@@ -3,7 +3,7 @@
 <head>
     <title>
         {% if IS_DEV %}
-            Entwicklung Netzwerk-Monitor
+            DEV Netzwerk-Monitor
         {% else %}
             Netzwerk-Monitor
         {% endif %}
@@ -17,25 +17,24 @@
 <body>
 
 <h1 class="header">
-  🌐 Netzwerk-Monitoring
+  🌐 Netzwerk-Monitor
   {% if IS_DEV %}
     <div class="test-banner">
     ⚠️ Entwicklungsumgebung – nicht produktiv ⚠️
     </div>
   {% endif %}  
-  <span class="mqtt-values">
+  <span class="mqtt-valueblock">
     <span>Raumklima im Büro: </span>
 
     <span class="status-group">
       <span id="temp-led" class="status-led"></span>
-      <span id="temp-display" class="mqtt-value">🌡️ -- °C</span>
+      <span id="temp-display" class="mqtt-values">🌡️ -- °C</span>
     </span>
 
      <span class="status-group">
       <span id="hum-led" class="status-led"></span>
-      <span id="hum-display" class="mqtt-value">💧 -- %</span>
+      <span id="hum-display" class="mqtt-values">💦 -- %</span>
     </span>
-
   </span>
 </h1>
 

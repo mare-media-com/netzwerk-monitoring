@@ -71,7 +71,7 @@ function onMessageArrived(message) {
         const humDisplay = document.getElementById("hum-display");
         const humLed = document.getElementById("hum-led");
 
-        humDisplay.textContent = `💧 ${payload} %`;
+        humDisplay.textContent = `💦 ${payload} %`;
 
         lastHumUpdate = Date.now();
 
