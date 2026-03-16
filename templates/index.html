@@ -3,7 +3,7 @@
 <head>
     <title>
         {% if IS_DEV %}
-            DEV Netzwerk-Monitor
+            NetMon [Entwicklung]
         {% else %}
             Netzwerk-Monitor
         {% endif %}
@@ -17,7 +17,7 @@
 <body>
 
 <h1 class="header">
-  🌐 Netzwerk-Monitor
+  🌐 NetMon (Netzwerk-Monitor)
   {% if IS_DEV %}
     <div class="test-banner">
     ⚠️ Entwicklungsumgebung – nicht produktiv ⚠️
@@ -47,7 +47,7 @@
     <!-- Internet -->
     <!-- ===================== -->
 
-    <div id="internetCard" class="card">
+    <div id="internetCard" class="card" data-host="internet">
         <h3>Internet</h3>
 
         <p class="statusanzeige">
@@ -67,19 +67,19 @@
     <!-- FRITZ!Box -->
     <!-- ===================== -->
 
-    <div id="fritzCard" class="card">
+    <div id="fritzCard" class="card" data-host="fritzbox">
         <h3>FRITZ!Box</h3>
 
         <p class="statusanzeige">
-            Status: <span id="fritzStatus">-</span>
+            Status: <span id="fritzboxStatus">-</span>
         </p>
 
         <small class="muted">
-            Latenz: <span id="fritzLatency" class="latency">–</span>
+            Latenz: <span id="fritzboxLatency" class="latency">–</span>
         </small>
 
-        <div id="fritzFailureBlock" class="muted"></div>
-        <div id="fritzStatsBlock" class="muted stats"></div>
+        <div id="fritzboxFailureBlock" class="muted"></div>
+        <div id="fritzboxStatsBlock" class="muted stats"></div>
     </div>
 
 
@@ -87,10 +87,31 @@
     <!-- Raspi4b -->
     <!-- ===================== -->
 
-    <div id="raspi4bCard" class="card">
+    <div id="raspi4bCard" class="card" data-host="raspi4b">
         <h3>raspi4b</h3>
 
-        <p class="statusanzeige">
+        <div class="rpi-data">
+            <label>🌡 CPU-Temp</label>
+            <div id="cpuGaugeRaspi4b" style="width:120px;height:90px;"></div>
+
+            <div class="progress-container">
+                <label>🧠 RAM</label>
+                <div id="ramTextRaspi4b"></div>
+                <div class="progress">
+                    <div id="ramBarRaspi4b" class="progress-bar"></div>
+                </div>
+            </div>
+
+            <div class="progress-container">
+                <label>💾 SD-Card</label>
+                <div id="sdTextRaspi4b"></div>
+                <div class="progress">
+                    <div id="sdBarRaspi4b" class="progress-bar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- <p class="statusanzeige">
             Status: <span id="raspi4bStatus">-</span>
         </p>
 
@@ -99,7 +120,7 @@
         </small>
 
         <div id="raspi4bFailureBlock" class="muted"></div>
-        <div id="raspi4bStatsBlock" class="muted stats"></div>
+        <div id="raspi4bStatsBlock" class="muted stats"></div> -->
     </div>
 
 
@@ -107,27 +128,82 @@
     <!-- raspibernd -->
     <!-- ===================== -->
 
-    <div class="card">
+    <div id="raspiberndCard" class="card" data-host="raspibernd">
         <h3>raspibernd</h3>
 
-        <label>🌡 CPU-Temp</label>
-        <div id="cpuGauge" style="width:120px;height:90px;"></div>
+        <div class="rpi-data">
+            <label>🌡 CPU-Temp</label>
+            <div id="cpuGaugeRaspibernd" style="width:120px;height:90px;"></div>
 
-        <div class="progress-container">
-            <label>🧠 RAM</label>
-            <div id="ramText"></div>
-            <div class="progress">
-                <div id="ramBar" class="progress-bar"></div>
+            <div class="progress-container">
+                <label>🧠 RAM</label>
+                <div id="ramTextRaspibernd"></div>
+                <div class="progress">
+                    <div id="ramBarRaspibernd" class="progress-bar"></div>
+                </div>
+            </div>
+
+            <div class="progress-container">
+                <label>💾 SD-Card</label>
+                <div id="sdTextRaspibernd"></div>
+                <div class="progress">
+                    <div id="sdBarRaspibernd" class="progress-bar"></div>
+                </div>
             </div>
         </div>
 
-        <div class="progress-container">
-            <label>💾 SD-Card</label>
-            <div id="sdText"></div>
-            <div class="progress">
-                <div id="sdBar" class="progress-bar"></div>
+        <!-- <p class="statusanzeige">
+        Status: <span id="raspiberndStatus">-</span>
+        </p>
+
+        <small class="muted">
+            Latenz: <span id="raspiberndLatency" class="latency">–</span>
+        </small>
+
+        <div id="raspiberndFailureBlock" class="muted"></div>
+        <div id="raspiberndStatsBlock" class="muted stats"></div> -->
+
+    </div>
+
+    <!-- ===================== -->
+    <!-- raspberrypi -->
+    <!-- ===================== -->
+
+    <div id="raspberrypiCard" class="card" data-host="raspberrypi">
+        <h3>raspberrypi</h3>
+
+        <div class="rpi-data">
+            <label>🌡 CPU-Temp</label>
+            <div id="cpuGaugeRaspberrypi" style="width:120px;height:90px;"></div>
+
+            <div class="progress-container">
+                <label>🧠 RAM</label>
+                <div id="ramTextRaspberrypi"></div>
+                <div class="progress">
+                    <div id="ramBarRaspberrypi" class="progress-bar"></div>
+                </div>
+            </div>
+
+            <div class="progress-container">
+                <label>💾 SD-Card</label>
+                <div id="sdTextRaspberrypi"></div>
+                <div class="progress">
+                    <div id="sdBarRaspberrypi" class="progress-bar"></div>
+                </div>
             </div>
         </div>
+
+        <!-- <p class="statusanzeige">
+        Status: <span id="raspberrypiStatus">-</span>
+        </p>
+
+        <small class="muted">
+            Latenz: <span id="raspberrypiLatency" class="latency">–</span>
+        </small>
+
+        <div id="raspberrypiFailureBlock" class="muted"></div>
+        <div id="raspberrypiStatsBlock" class="muted stats"></div> -->
+
     </div>
 
 </div>
@@ -145,7 +221,7 @@
 
     <div class="timeline">
         <h4>📊 FRITZ!Box</h4>
-        <div id="fritzTimeline"></div>
+        <div id="fritzboxTimeline"></div>
     </div>
 
     <div class="timeline">
@@ -158,257 +234,36 @@
         <div id="raspiberndTimeline"></div>
     </div>
 
+    <div class="timeline">
+        <h4>📊 raspberrypi</h4>
+        <div id="raspberrypiTimeline"></div>
+    </div>
+
 </div>
 
+<!-- ===================== -->
+<!-- HOSTS + PREFIXMAP vom Server an JS übergeben -->
+<!-- ===================== -->
 <script>
-const renderedEvents = {
-    internet: new Set(),
-    fritzbox: new Set(),
-    raspi4b: new Set(),
-    raspibernd: new Set()
-};
+    // hostConfig direkt aus Flask HOSTS als JS-Objekt
+    const hostConfig = {{ HOSTS | tojson | safe }};
 
-/* ===================== */
-/* Gauge */
-/* ===================== */
-
-let cpuGauge = new JustGage({
-    id: "cpuGauge",
-    value: 0,
-    min: 30,
-    max: 90,
-    title: "CPU Temperature",
-    label: "°C",
-    decimals: 2,
-    valueFontColor: "#ffffff",
-    titleFontColor: "#ffffff",
-    labelFontColor: "#ffffff",
-    gaugeColor: "#808080",   // hellgrau
-    levelColors: ["#33ff57", "#ffc107", "#ff5733"]
-});
-
-
-/* ===================== */
-/* Helpers */
-/* ===================== */
-
-function updateCardState(cardId, isOk) {
-
-    const card = document.getElementById(cardId);
-    if (!card) return;
-
-    card.classList.remove("ok", "fail");
-    card.classList.add(isOk ? "ok" : "fail");
-}
-
-
-function setLatency(id, value) {
-
-    const el = document.getElementById(id);
-    if (!el) return;
-
-    if (value === null || value === undefined) {
-        el.innerHTML = "–";
-        return;
-    }
-
-    let color = value < 50 ? "green" :
-                value <= 100 ? "yellow" :
-                               "red";
-
-    el.className = `latency ${color}`;
-    el.innerHTML = `⏱ ${value} ms`;
-}
-
-
-/* ===================== */
-/* RAM */
-/* ===================== */
-
-function updateRam(percent, usedMB, totalMB) {
-
-    const freeMB = totalMB - usedMB;
-
-    let dotColor = percent > 85 ? "#ff5733" :
-                   percent > 75 ? "#ffc107" :
-                                  "#33ff57";
-
-    document.getElementById("ramText").innerHTML =
-        `<span class="status-dot" style="background:${dotColor}"></span>
-         Used: ${usedMB.toFixed(2)}MB (${percent.toFixed(2)}%)<br>
-         Free: ${freeMB.toFixed(2)}MB | Total: ${totalMB.toFixed(2)}MB`;
-
-    document.getElementById("ramBar").style.width = percent + "%";
-}
-
-
-/* ===================== */
-/* SD */
-/* ===================== */
-
-function updateSd(percent, usedGB, totalGB) {
-
-    const freeGB = totalGB - usedGB;
-
-    let dotColor = percent > 80 ? "#ff5733" :
-                   percent > 60 ? "#ffc107" :
-                                  "#33ff57";
-
-    document.getElementById("sdText").innerHTML =
-        `<span class="status-dot" style="background:${dotColor}"></span>
-         Used: ${usedGB.toFixed(2)}GB (${percent.toFixed(2)}%)<br>
-         Free: ${freeGB.toFixed(2)}GB | Total: ${totalGB.toFixed(2)}GB`;
-
-    document.getElementById("sdBar").style.width = percent + "%";
-}
-
-
-/* ===================== */
-/* Failure Renderer */
-/* ===================== */
-
-function renderFailure(blockId, data, prefix) {
-
-    const block = document.getElementById(blockId);
-    if (!block) return;
-
-    if (!data[`${prefix}_fail_start`]) {
-        block.innerHTML = `<small>✅ Noch kein Ausfall</small>`;
-        return;
-    }
-
-    block.innerHTML = `
-        <small>
-            ❌ Zuletzt ausgefallen: ${data[`${prefix}_fail_start`]}<br>
-            🕒 Dauer: ${data[`${prefix}_fail_duration_text`]}
-        </small>
-    `;
-}
-
-function renderStats(blockId, data, prefix) {
-
-    const block = document.getElementById(blockId);
-    if (!block) return;
-
-    const availability = data[`${prefix}_availability_7d`];
-
-    let dotColor = "#33ff57";        // Default grün
-
-    if (availability !== null && availability !== undefined) {
-        if (availability < 99) dotColor = "#ff5733";      // rot
-        else if (availability < 99.9) dotColor = "#ffc107"; // gelb
-    }
-
-    block.innerHTML = `
-        <small>
-            ⚡ Ausfälle 24h: ${data[`${prefix}_outages_24h`] ?? "-"}<br>
-            📅 Ausfälle 7 Tage: ${data[`${prefix}_outages_7d`] ?? "-"}<br>
-            ❌ Downtime 7 Tage: ${data[`${prefix}_downtime_7d`] ?? "-"}<br>
-            <span class="status-dot" style="background:${dotColor}"></span>
-             Verfügbarkeit 7 Tage: ${data[`${prefix}_availability_7d`] ?? "-"} %
-        </small>
-    `;
-}
-
-/* ===================== */
-/* Timeline Renderer */
-/* ===================== */
-
-function renderTimeline(containerId, events, key) {
-
-    const el = document.getElementById(containerId);
-    if (!el || !events) return;
-
-    events.forEach(event => {
-
-        const eventId = `${event.time}-${event.state}`;
-
-        // Bereits vorhanden? → überspringen
-        if (renderedEvents[key].has(eventId)) return;
-
-        renderedEvents[key].add(eventId);
-
-        const div = document.createElement("div");
-        div.className = `event ${event.state.toLowerCase()} new-event`;
-
-        div.innerHTML = `${event.time} | ${event.state}`;
-
-        el.prepend(div); // NEUE EVENTS OBEN ⭐
+    // prefixMap automatisch ableiten
+    const prefixMap = {};
+    Object.keys(hostConfig).forEach(host => {
+        // Wenn hostConfig[host].prefix existiert, nutze das
+        if (hostConfig[host].prefix) {
+            prefixMap[host] = hostConfig[host].prefix;
+        } else {
+            // Ansonsten Default: Hostname selbst
+            prefixMap[host] = host;
+        }
     });
-}
-
-/* ===================== */
-/* Main Update */
-/* ===================== */
-
-function updateServerStatus(data) {
-
-    if (!data.servers) return;
-
-    document.getElementById("internetStatus").innerHTML =
-        data.servers.internet ? "🟢 OK" : "🔴 FAIL";
-
-    document.getElementById("fritzStatus").innerHTML =
-        data.servers.fritzbox ? "🟢 OK" : "🔴 FAIL";
-
-    document.getElementById("raspi4bStatus").innerHTML =
-        data.servers.raspi4b ? "🟢 OK" : "🔴 FAIL";
-
-    updateCardState("internetCard", data.servers.internet);
-    updateCardState("fritzCard",    data.servers.fritzbox);
-    updateCardState("raspi4bCard",  data.servers.raspi4b);
-
-    setLatency("internetLatency", data.servers.internet_latency);
-    setLatency("fritzLatency",    data.servers.fritzbox_latency);
-    setLatency("raspi4bLatency",  data.servers.raspi4b_latency);
-
-    renderFailure("internetFailureBlock", data, "inet");
-    renderStats("internetStatsBlock", data, "inet");
-    renderFailure("fritzFailureBlock",    data, "fritz");
-    renderStats("fritzStatsBlock", data, "fritz");
-    renderFailure("raspi4bFailureBlock",  data, "raspi4b");
-    renderStats("raspi4bStatsBlock", data, "raspi4b");
-
-    renderTimeline("internetTimeline",   data.timelines?.internet,   "internet");
-    renderTimeline("fritzTimeline",      data.timelines?.fritzbox,   "fritzbox");
-    renderTimeline("raspi4bTimeline",    data.timelines?.raspi4b,    "raspi4b");
-    renderTimeline("raspiberndTimeline", data.timelines?.raspibernd, "raspibernd");
-}
-
-
-/* ===================== */
-/* Fetch */
-/* ===================== */
-
-function fetchStats() {
-
-    fetch("/debug")
-        .then(res => res.json())
-        .then(data => {
-
-            if (data.cpu !== null)
-                cpuGauge.refresh(parseFloat(data.cpu));
-
-            if (data.ram !== null) {
-                const totalRAM = 909.6;
-                const usedRAM = totalRAM * data.ram / 100;
-                updateRam(data.ram, usedRAM, totalRAM);
-            }
-
-            if (data.sd !== null) {
-                const totalSD = 28.95;
-                const usedSD = totalSD * data.sd / 100;
-                updateSd(data.sd, usedSD, totalSD);
-            }
-
-            updateServerStatus(data);
-        });
-}
-
-setInterval(fetchStats, 15000);
-fetchStats();
 
 </script>
+
+<!-- NetMon Haupt-Skript -->
+<script src="/static/js/netmon.js"></script>
 
 <!-- Paho MQTT JavaScript Bibliothek für WebSockets -->
 <script src="https://unpkg.com/paho-mqtt@1.1.0/paho-mqtt-min.js"></script>

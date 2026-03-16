@@ -12,12 +12,7 @@ from zoneinfo import ZoneInfo
 from collections import defaultdict, deque
 import platform
 import requests
-from config import (
-    RASPIBERND_IP,
-    FRITZBOX_IP,
-    RASPI4B_IP,
-    PING_TARGETS
-)
+from config import HOSTS, RASPBERRY_THRESHOLDS
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
@@ -38,6 +33,40 @@ else:
 
 print(f"Starte Flask auf Port {PORT} ({'Entwicklung' if IS_DEV else 'Produktiv'})")
 
+
+# ---------------------
+# PING und Raspberry Hosts
+# ---------------------
+
+PING_HOSTS = [
+    host for host, cfg in HOSTS.items()
+    if "ping" in cfg.get("types", [])
+]
+
+RASPBERRY_HOSTS = [
+    host for host, cfg in HOSTS.items()
+    if "raspberry" in cfg.get("types", [])
+]
+
+# ---------------------
+# IPs, RAM, SD
+# ---------------------
+HOST_IPS = {
+    host: cfg["ip"]
+    for host, cfg in HOSTS.items()
+    if "ip" in cfg
+}
+
+TOTAL_RAM = {
+    host: HOSTS[host]["total_ram"]
+    for host in RASPBERRY_HOSTS
+}
+
+TOTAL_SD = {
+    host: HOSTS[host]["total_sd"]
+    for host in RASPBERRY_HOSTS
+}
+
 # =====================
 # SYSTEM & PFADE
 # =====================
@@ -56,16 +85,10 @@ TIMEOUT = 2
 AGENT_TIMEOUT = 90  # Sekunden
 LOCAL_TZ = ZoneInfo("Europe/Berlin")
 
-RAM_WARN_THRESHOLD = 75
-RAM_CRIT_THRESHOLD = 85
-
 RAM_CHECK_INTERVAL = 15          # Sekunden
 RAM_TRIGGER_TIME = 300           # 5 Minuten
 
 RAM_TRIGGER_COUNT = RAM_TRIGGER_TIME // RAM_CHECK_INTERVAL
-
-ram_warn_counter = 0
-ram_crit_counter = 0
 
 # =====================
 # LOGGING
@@ -79,24 +102,47 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.info("Logging gestartet")
 
+# speichert aktuellen Status pro Host/Sensor, z.B. "OK", "WARN", "CRITICAL"
+sensor_states = {}
+
+# speichert die Timeline
+timelines = defaultdict(lambda: deque(maxlen=50))  # max 50 Einträge pro Host
+
 # =====================
 # STATUS
 # =====================
 status = {
-    "server": {
-        "fritzbox": None,
-        "internet": None,
-        "raspi4b": None,
-        "fritzbox_latency": None,
-        "internet_latency": None,
-        "raspi4b_latency": None
-    },
-    "raspibernd": {
-        "cpu_temp": None,
-        "ram": None,
-        "sd": None
-    }
+    "server": {},
 }
+
+# Fehlversuche zählen (Ping-Stabilisierung)
+ping_fail_counter = {host: 0 for host in HOSTS}
+PING_FAIL_THRESHOLD = 3
+
+ram_warn_counter = {}
+ram_crit_counter = {}
+
+
+# Ping Hosts vorbereiten
+for host, cfg in HOSTS.items():
+    if "ping" in cfg.get("types", []):
+        status["server"][host] = None
+        status["server"][f"{host}_latency"] = None
+
+# Raspberry Hosts vorbereiten
+for host, cfg in HOSTS.items():
+    if "raspberry" in cfg.get("types", []):
+        status[host] = {
+            "cpu_temp": None,
+
+            "ram_percent": None,
+            "ram_used": None,
+            "ram_total": None,
+
+            "sd_percent": None,
+            "sd_used": None,
+            "sd_total": None            
+        }
 
 # =====================
 # HILFSFUNKTIONEN
@@ -112,6 +158,17 @@ def ping(host):
         return result.returncode == 0
     except Exception:
         return False
+
+def check_multiple_ping(targets):
+    successes, latencies = 0, []
+    for target in targets:
+        ok, latency = ping_with_latency(target)
+        if ok:
+            successes += 1
+            latencies.append(latency)
+    if successes >= 2:  # z. B. mindestens 2 Erfolge
+        return True, int(sum(latencies)/len(latencies))
+    return False, None
 
 def ping_with_latency(host):
     try:
@@ -130,17 +187,6 @@ def ping_with_latency(host):
         print("PING ERROR:", e)
         return False, None
 
-def check_internet():
-    successes, latencies = 0, []
-    for host in PING_TARGETS:
-        ok, latency = ping_with_latency(host)
-        if ok:
-            successes += 1
-            latencies.append(latency)
-    if successes >= 2:
-        return True, int(sum(latencies)/len(latencies))
-    return False, None
-
 def log_change(source, component, old, new):
     if old is None:
         return
@@ -148,44 +194,74 @@ def log_change(source, component, old, new):
         state = "OK" if new else "FAIL"
         logger.info(f"{source} | {component} | {state}")
 
-def check_raspibernd_limits(cpu_temp, ram, sd):
-    if cpu_temp is not None and cpu_temp >= 75:
-        logger.warning(f"RASPIBERND | CPU_TEMP | HIGH | {cpu_temp:.2f}")
-        logger.info(f"SERVER | RASPIBERND | TEMP_WARN")
+def check_raspberry_limits(host, cpu_temp, ram, sd):
 
-    global ram_warn_counter, ram_crit_counter
+    thresholds = RASPBERRY_THRESHOLDS
+    
+    # =====================
+    # CPU Temperatur
+    # =====================
+
+    if cpu_temp is not None:
+        if cpu_temp >= thresholds["cpu"]["crit"]:
+            logger.warning(f"{host.upper()} | CPU_TEMP | CRITICAL | {cpu_temp:.2f}")
+            logger.info(f"SERVER | {host.upper()} | TEMP_CRITICAL")
+        elif cpu_temp >= thresholds["cpu"]["warn"]:
+            logger.warning(f"{host.upper()} | CPU_TEMP | HIGH | {cpu_temp:.2f}")
+            logger.info(f"SERVER | {host.upper()} | TEMP_WARN")
+
+    # =====================
+    # RAM Überwachung
+    # =====================
+
+    if host not in ram_warn_counter:
+        ram_warn_counter[host] = 0
+        ram_crit_counter[host] = 0
 
     if ram is not None:
 
-        if ram >= RAM_CRIT_THRESHOLD:
-            ram_crit_counter += 1
-            ram_warn_counter += 1   # logisch auch warn-level
+        if ram >= thresholds["ram"]["crit"]:
+            ram_crit_counter[host] += 1
+            ram_warn_counter[host] += 1
 
-        elif ram >= RAM_WARN_THRESHOLD:
-            ram_warn_counter += 1
-            ram_crit_counter = 0
+        elif ram >= thresholds["ram"]["warn"]:
+            ram_warn_counter[host] += 1
+            ram_crit_counter[host] = 0
 
         else:
-            ram_warn_counter = 0
-            ram_crit_counter = 0
+            ram_warn_counter[host] = 0
+            ram_crit_counter[host] = 0
 
-    if ram_crit_counter == RAM_TRIGGER_COUNT:
-        logger.warning(f"RASPIBERND | RAM | CRITICAL | {ram:.1f}")
-        logger.info("SERVER | RASPIBERND | RAM_CRITICAL")
-        ram_crit_counter = RAM_TRIGGER_COUNT   # Deckeln
+    if ram_crit_counter[host] == RAM_TRIGGER_COUNT:
 
-    elif ram_warn_counter == RAM_TRIGGER_COUNT:
-        logger.warning(f"RASPIBERND | RAM | HIGH | {ram:.1f}")
-        logger.info("SERVER | RASPIBERND | RAM_WARN")
-        ram_warn_counter = RAM_TRIGGER_COUNT   # Deckeln
+        logger.warning(f"{host.upper()} | RAM | CRITICAL | {ram:.1f}")
+        logger.info(f"SERVER | {host.upper()} | RAM_CRITICAL")
+
+        ram_crit_counter[host] = RAM_TRIGGER_COUNT
+
+    elif ram_warn_counter[host] == RAM_TRIGGER_COUNT:
+
+        logger.warning(f"{host.upper()} | RAM | HIGH | {ram:.1f}")
+        logger.info(f"SERVER | {host.upper()} | RAM_WARN")
+
+        ram_warn_counter[host] = RAM_TRIGGER_COUNT
+
+    # =====================
+    # SD Karte
+    # =====================
 
     if sd is not None:
-        if sd >= 80:
-            logger.warning(f"RASPIBERND | SD | CRITICAL | {sd:.2f}")
-            logger.info(f"SERVER | RASPIBERND | SD_CRITICAL")
-        elif sd >= 60:
-            logger.warning(f"RASPIBERND | SD | HIGH | {sd:.2f}")
-            logger.info(f"SERVER | RASPIBERND | SD_WARN")
+
+        if sd >= thresholds["sd"]["crit"]:
+
+            logger.warning(f"{host.upper()} | SD | CRITICAL | {sd:.2f}")
+            logger.info(f"SERVER | {host.upper()} | SD_CRITICAL")
+
+        elif sd >= thresholds["sd"]["warn"]:
+
+            logger.warning(f"{host.upper()} | SD | HIGH | {sd:.2f}")
+            logger.info(f"SERVER | {host.upper()} | SD_WARN")
+
 
 # =====================
 # LOG- & TIMELINE-FUNKTIONEN
@@ -246,6 +322,35 @@ def read_server_timeline(max_events=15):
                 timeline[server].append({"time": ts_local.strftime("%d.%m.%Y %H:%M:%S"),
                                          "state": state})
     return {server: list(events) for server, events in timeline.items()}
+
+# =====================
+# SENSOR STATUS & TIMELINE
+# =====================
+
+def update_sensor_state(host, sensor, new_state):
+    """ Aktualisiert die Timeline nur bei Statusänderung """
+    if host not in sensor_states:
+        sensor_states[host] = {}
+
+    old_state = sensor_states[host].get(sensor, "OK")
+
+    if new_state != old_state:
+        timelines[host].append({
+            "time": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
+            "state": f"{sensor.upper()}_{new_state}"
+        })
+        sensor_states[host][sensor] = new_state
+        print(f"Timeline aktualisiert: {host} | {sensor.upper()} -> {new_state}")
+
+def evaluate_sensor(host, sensor, value, warn, crit):
+    """ Bewertet den Sensorwert und aktualisiert den Status """
+    if value >= crit:
+        state = "CRITICAL"
+    elif value >= warn:
+        state = "WARN"
+    else:
+        state = "OK"
+    update_sensor_state(host, sensor, state)
 
 def last_server_outage_duration(component):
     fail_times = []
@@ -333,12 +438,6 @@ def calculate_availability(component, hours):
     uptime = total_time - downtime
     return round((uptime / total_time) * 100, 3)
 
-def format_duration(td):
-    total_seconds = int(td.total_seconds())
-    hours, remainder = divmod(total_seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    return f"{hours}h {minutes}m {seconds}s"
-
 def format_duration(delta):
     if not delta:
         return None
@@ -352,43 +451,6 @@ def format_duration(delta):
     return f"{h}h {m}m {s}s"
 
 # =====================
-# RASPIBERND STATS
-# =====================
-def get_raspibernd_stats():
-    try:
-        r = requests.get(f"http://{RASPIBERND_IP}:8888/dynamic.json", timeout=5)
-        data = r.json()
-
-        # =====================
-        # CPU Temperatur
-        # =====================
-        cpu_temp = float(data.get("soc_temp"))
-
-        # =====================
-        # RAM Nutzung berechnen
-        # =====================
-        memory_available = float(data.get("memory_available"))
-        memory_total = 909.60   # ← EINMALIG aus RPi-Monitor übernommen
-
-        memory_used = memory_total - memory_available
-        ram_usage = (memory_used / memory_total) * 100
-
-        # =====================
-        # SD Nutzung
-        # =====================
-        sd_used = float(data.get("sdcard_root_used"))
-
-        # Falls du Prozent willst (optional)
-        sd_total = 28950        # ← EINMALIG aus RPi-Monitor übernommen
-        sd_usage = (sd_used / sd_total) * 100
-
-        return cpu_temp, ram_usage, sd_usage
-
-    except Exception as e:
-        print("RPi-Monitor fetch error:", e)
-        return None, None, None
-
-# =====================
 # FLASK APP
 # =====================
 app = Flask(__name__)
@@ -399,164 +461,133 @@ def index():
     logs = read_recent_logs()
     server_timeline = read_server_timeline()
 
-    inet_downtime_7d = calculate_downtime("INTERNET", 24*7)
-    inet_availability_7d = calculate_availability("INTERNET", 24*7)
+    server_stats = {}
 
-    fritz_downtime_7d = calculate_downtime("FRITZBOX", 24*7)
-    fritz_availability_7d = calculate_availability("FRITZBOX", 24*7)
+    for host in PING_HOSTS:
 
-    raspi4b_downtime_7d = calculate_downtime("RASPI4B", 24*7)
-    raspi4b_availability_7d = calculate_availability("RASPI4B", 24*7)
+        fail_start, fail_duration = last_server_outage_duration(host.upper())
+
+        server_stats[host] = {
+            "fail_start": fail_start,
+            "fail_duration": fail_duration,
+            "outages_24h": count_recent_outages(host.upper(), 24),
+            "outages_7d": count_recent_outages(host.upper(), 24*7),
+            "downtime_7d": format_duration(calculate_downtime(host.upper(), 24*7)),
+            "availability_7d": calculate_availability(host.upper(), 24*7)
+        }
 
     return render_template(
         "index.html",
+        HOSTS=HOSTS,
         status=status,
         logs=logs,
         server_timeline=server_timeline,
+        server_stats=server_stats,
 
-        inet_fail_start=last_server_outage_duration("INTERNET")[0],
-        inet_fail_duration=last_server_outage_duration("INTERNET")[1],
-        inet_outages_7d=count_recent_outages("INTERNET", 24*7),
-        inet_outages_24h=count_recent_outages("INTERNET", 24),
-        inet_downtime_7d=format_duration(inet_downtime_7d),
-        inet_availability_7d=inet_availability_7d,
-
-        fritz_fail_start=last_server_outage_duration("FRITZBOX")[0],
-        fritz_fail_duration=last_server_outage_duration("FRITZBOX")[1],
-        fritz_outages_7d=count_recent_outages("FRITZBOX", 24*7),
-        fritz_outages_24h=count_recent_outages("FRITZBOX", 24),
-        fritz_downtime_7d=format_duration(fritz_downtime_7d),
-        fritz_availability_7d=fritz_availability_7d,
-
-        raspi4b_fail_start=last_server_outage_duration("RASPI4B")[0],
-        raspi4b_fail_duration=last_server_outage_duration("RASPI4B")[1],
-        raspi4b_outages_7d=count_recent_outages("RASPI4B", 24*7),
-        raspi4b_outages_24h=count_recent_outages("RASPI4B", 24),
-        raspi4b_downtime_7d=format_duration(raspi4b_downtime_7d),
-        raspi4b_availability_7d=raspi4b_availability_7d,
-
-        raspibernd_cpu=status["raspibernd"]["cpu_temp"],
-        raspibernd_ram=status["raspibernd"]["ram"],
-        raspibernd_sd=status["raspibernd"]["sd"],
-
-        IS_DEV=IS_DEV
-    )
+            IS_DEV=IS_DEV
+        )
 
 @app.route("/api/status")
 def api_status():
-    return jsonify(status)
+    raspberry_stats = {}
+    for host, cfg in HOSTS.items():
+        if "raspberry" not in cfg.get("types", []):
+            continue
+        s = status.get(host, {})
+        raspberry_stats[host] = {
+            "cpu": s.get("cpu_temp"),
+            "ram_percent": s.get("ram_percent"),
+            "ram_used": s.get("ram_used"),
+            "ram_total": s.get("ram_total"),
+            "sd_percent": s.get("sd_percent"),
+            "sd_used": s.get("sd_used"),
+            "sd_total": s.get("sd_total")
+        }
+
+    return jsonify({
+        "status": status,
+        "raspberries": raspberry_stats,
+        "thresholds": RASPBERRY_THRESHOLDS
+    })
 
 @app.route("/debug")
 def debug():
-
     now = datetime.now(LOCAL_TZ)
-
-    # =====================
-    # Outage Daten
-    # =====================
-
-    inet_fail_start, inet_fail_duration = last_server_outage_duration("INTERNET")
-    fritz_fail_start, fritz_fail_duration = last_server_outage_duration("FRITZBOX")
-    raspi4b_fail_start, raspi4b_fail_duration = last_server_outage_duration("RASPI4B")
-
-    # =====================
-    # Statistiken
-    # =====================
-
-    inet_outages_24h = count_recent_outages("INTERNET", 24)
-    inet_outages_7d  = count_recent_outages("INTERNET", 24*7)
-    inet_downtime_7d = format_duration(calculate_downtime("INTERNET", 24*7))
-    inet_availability_7d = calculate_availability("INTERNET", 24*7)
-
-    fritz_outages_24h = count_recent_outages("FRITZBOX", 24)
-    fritz_outages_7d  = count_recent_outages("FRITZBOX", 24*7)
-    fritz_downtime_7d = format_duration(calculate_downtime("FRITZBOX", 24*7))
-    fritz_availability_7d = calculate_availability("FRITZBOX", 24*7)
-
-    raspi4b_outages_24h = count_recent_outages("RASPI4B", 24)
-    raspi4b_outages_7d  = count_recent_outages("RASPI4B", 24*7)
-    raspi4b_downtime_7d = format_duration(calculate_downtime("RASPI4B", 24*7))
-    raspi4b_availability_7d = calculate_availability("RASPI4B", 24*7)
-
-    # =====================
-    # Timelines
-    # =====================
-
     server_timeline = read_server_timeline()
 
-    return {
-        # =====================
-        # Systemwerte
-        # =====================
-        "cpu": status["raspibernd"]["cpu_temp"],
-        "ram": status["raspibernd"]["ram"],
-        "sd":  status["raspibernd"]["sd"],
+    # =====================
+    # SERVER STATUS
+    # =====================
+    servers = {}
+    for host, cfg in HOSTS.items():
+        if "ping" in cfg.get("types", []):
+            servers[host] = {
+                "online": status["server"].get(host),
+                "latency": status["server"].get(f"{host}_latency")
+            }
 
-        # =====================
-        # Serverstatus
-        # =====================
-        "servers": {
-            "internet": status["server"]["internet"],
-            "internet_latency": status["server"]["internet_latency"],
+    # =====================
+    # SERVER STATISTIKEN
+    # =====================
+    server_stats = {}
+    for host, cfg in HOSTS.items():
+        if "ping" not in cfg.get("types", []):
+            continue
 
-            "fritzbox": status["server"]["fritzbox"],
-            "fritzbox_latency": status["server"]["fritzbox_latency"],
+        fail_start, fail_duration = last_server_outage_duration(host.upper())
 
-            "raspi4b": status["server"]["raspi4b"],
-            "raspi4b_latency": status["server"]["raspi4b_latency"]
-        },
-
-        # =====================
-        # Internet
-        # =====================
-        "inet_fail_start": (
-            inet_fail_start.strftime("%d.%m.%Y %H:%M:%S")
-            if inet_fail_start else None
-        ),
-        "inet_fail_duration_text": format_duration(inet_fail_duration),
-
-        "inet_outages_24h": inet_outages_24h,
-        "inet_outages_7d": inet_outages_7d,
-        "inet_downtime_7d": inet_downtime_7d,
-        "inet_availability_7d": inet_availability_7d,
-
-        # =====================
-        # FritzBox
-        # =====================
-        "fritz_fail_start": (
-            fritz_fail_start.strftime("%d.%m.%Y %H:%M:%S")
-            if fritz_fail_start else None
-        ),
-        "fritz_fail_duration_text": format_duration(fritz_fail_duration),
-
-        "fritz_outages_24h": fritz_outages_24h,
-        "fritz_outages_7d": fritz_outages_7d,
-        "fritz_downtime_7d": fritz_downtime_7d,
-        "fritz_availability_7d": fritz_availability_7d,
-
-        # =====================
-        # Raspi4b
-        # =====================
-        "raspi4b_fail_start": (
-            raspi4b_fail_start.strftime("%d.%m.%Y %H:%M:%S")
-            if raspi4b_fail_start else None
-        ),
-        "raspi4b_fail_duration_text": format_duration(raspi4b_fail_duration),
-
-        "raspi4b_outages_24h": raspi4b_outages_24h,
-        "raspi4b_outages_7d": raspi4b_outages_7d,
-        "raspi4b_downtime_7d": raspi4b_downtime_7d,
-        "raspi4b_availability_7d": raspi4b_availability_7d,
-
-        # =====================
-        # Timelines
-        # =====================
-        "timelines": {
-            "internet": server_timeline.get("INTERNET", []),
-            "fritzbox": server_timeline.get("FRITZBOX", []),
-            "raspi4b": server_timeline.get("RASPI4B", []),
-            "raspibernd": server_timeline.get("RASPIBERND", [])
+        server_stats[host] = {
+            "fail_start": (
+                fail_start.strftime("%d.%m.%Y %H:%M:%S")
+                if fail_start else None
+            ),
+            "fail_duration": format_duration(fail_duration),
+            "outages_24h": count_recent_outages(host.upper(), 24),
+            "outages_7d": count_recent_outages(host.upper(), 24*7),
+            "downtime_7d": format_duration(
+                calculate_downtime(host.upper(), 24*7)
+            ),
+            "availability_7d": calculate_availability(host.upper(), 24*7)
         }
+
+    # =====================
+    # RASPBERRY SYSTEMWERTE
+    # =====================
+
+    raspberry_stats = {}
+    for host, cfg in HOSTS.items():
+        if "raspberry" not in cfg.get("types", []):
+            continue
+        s = status.get(host, {})
+        raspberry_stats[host] = {
+            "cpu": s.get("cpu_temp"),
+            "ram_percent": s.get("ram_percent"),
+            "ram_used": s.get("ram_used"),
+            "ram_total": s.get("ram_total"),
+            "sd_percent": s.get("sd_percent"),
+            "sd_used": s.get("sd_used"),
+            "sd_total": s.get("sd_total")
+        }
+
+    # =====================
+    # TIMELINES (SERVER + SENSOR), auf letzte 5 Einträge limitiert
+    # =====================
+    timelines_combined = {}
+    for host in HOSTS:
+        server_events = server_timeline.get(host.upper(), [])
+        sensor_events = list(timelines.get(host, []))
+        timelines_combined[host] = server_events + sensor_events
+
+    # =====================
+    # RÜCKGABE ALS JSON
+    # =====================
+    return {
+        "time": now.strftime("%d.%m.%Y %H:%M:%S"),
+        "servers": servers,
+        "server_stats": server_stats,
+        "raspberries": raspberry_stats,
+        "timelines": timelines_combined,
+        "thresholds": RASPBERRY_THRESHOLDS
     }
 
 
@@ -565,39 +596,154 @@ def debug():
 # =====================
 def background_checks():
     while True:
-        # FritzBox
-        old_fritz = status["server"]["fritzbox"]
-        ok_fritz, latency_fritz = ping_with_latency(FRITZBOX_IP)
-        status["server"]["fritzbox"] = ok_fritz
-        status["server"]["fritzbox_latency"] = latency_fritz
-        log_change("SERVER", "FRITZBOX", old_fritz, ok_fritz)
 
-        # Internet
-        old_net = status["server"]["internet"]
-        ok_inet, latency_inet = check_internet()
-        status["server"]["internet"] = ok_inet
-        status["server"]["internet_latency"] = latency_inet
-        log_change("SERVER", "INTERNET", old_net, ok_inet)
+        # =====================
+        # PING HOSTS
+        # =====================
 
-        # Raspi4b
-        old_raspi = status["server"]["raspi4b"]
-        ok_raspi, latency_raspi = ping_with_latency(RASPI4B_IP)
-        status["server"]["raspi4b"] = ok_raspi
-        status["server"]["raspi4b_latency"] = latency_raspi
-        log_change("SERVER", "RASPI4B", old_raspi, ok_raspi)
+        for host, cfg in HOSTS.items():
+            if "ping" not in cfg.get("types", []):
+                continue
 
-        # raspibernd
-        cpu_temp, ram, sd = get_raspibernd_stats()
+            old_state = status["server"].get(host)
 
-        status["raspibernd"]["cpu_temp"] = cpu_temp
-        status["raspibernd"]["ram"] = ram
-        status["raspibernd"]["sd"] = sd
+            # Ping durchführen
+            if "ip" in cfg:
+                ok, latency = ping_with_latency(cfg["ip"])
+            elif "targets" in cfg:
+                ok, latency = check_multiple_ping(cfg["targets"])
+            else:
+                continue
 
-        check_raspibernd_limits(cpu_temp, ram, sd)
+            # Status setzen
+            status["server"][host] = ok
+            status["server"][f"{host}_latency"] = latency
+
+            # Ping-Fail-Counter erhöhen, falls fehlgeschlagen
+            if not ok:
+                ping_fail_counter[host] += 1
+                if ping_fail_counter[host] >= PING_FAIL_THRESHOLD:
+                    status["server"][host] = False
+                    status["server"][f"{host}_latency"] = None
+                    log_change("SERVER", host.upper(), old_state, False)
+            else:
+                ping_fail_counter[host] = 0
+                log_change("SERVER", host.upper(), old_state, ok)
+
+        # =====================
+        # RASPBERRY STATS
+        # =====================
+
+        for host, cfg in HOSTS.items():
+
+            if "raspberry" in cfg.get("types", []):
+
+                try:
+
+                    r = requests.get(
+                        f"http://{cfg['ip']}:8888/dynamic.json",
+                        timeout=5
+                    )
+
+                    data = r.json()
+
+                    # CPU Temperatur
+                    cpu_temp = float(data.get("soc_temp", 0))
+
+                    # RAM
+                    memory_available = float(data.get("memory_available"))
+                    memory_total = cfg.get("total_ram")
+
+                    memory_used = memory_total - memory_available
+                    ram_percent = (memory_used / memory_total) * 100
+
+                    # SD (rpimonitor liefert MB)
+                    sd_used = float(data.get("sdcard_root_used")) / 1024
+                    sd_total = cfg.get("total_sd")
+
+                    sd_percent = (sd_used / sd_total) * 100
+
+                    status[host] = {
+                        "cpu_temp": cpu_temp,
+
+                        "ram_percent": ram_percent,
+                        "ram_used": memory_used,
+                        "ram_total": memory_total,
+
+                        "sd_percent": sd_percent,
+                        "sd_used": sd_used,
+                        "sd_total": sd_total
+                    }
+
+                    check_raspberry_limits(host, cpu_temp, ram_percent, sd_percent)
+
+                    # =====================
+                    # SENSOR STATUS (Timeline)
+                    # =====================
+
+                    evaluate_sensor(
+                        host,
+                        "temp",
+                        cpu_temp,
+                        RASPBERRY_THRESHOLDS["cpu"]["warn"],
+                        RASPBERRY_THRESHOLDS["cpu"]["crit"]
+                    )
+
+                    evaluate_sensor(
+                        host,
+                        "ram",
+                        ram_percent,
+                        RASPBERRY_THRESHOLDS["ram"]["warn"],
+                        RASPBERRY_THRESHOLDS["ram"]["crit"]
+                    )
+
+                    evaluate_sensor(
+                        host,
+                        "sd",
+                        sd_percent,
+                        RASPBERRY_THRESHOLDS["sd"]["warn"],
+                        RASPBERRY_THRESHOLDS["sd"]["crit"]
+                    )
+
+                except Exception as e:
+                    print(f"{host} fetch error:", e)
 
         time.sleep(30)
 
+# =====================
+# TESTFUNKTION FÜR SENSOR-STATE HANDLING
+# =====================
+def test_sensor_state_handling():
+    test_host = "test_rpi"
+    test_values = [
+        {"cpu": 70, "ram": 60, "sd": 80},  # WARN/CRIT
+        {"cpu": 85, "ram": 75, "sd": 90},  # steigt auf CRIT/WARN
+        {"cpu": 85, "ram": 75, "sd": 90},  # gleiche Werte, sollte nichts neues erzeugen
+        {"cpu": 60, "ram": 50, "sd": 70},  # fällt auf OK/WARN
+        {"cpu": 90, "ram": 80, "sd": 95},  # wieder CRIT/WARN
+    ]
+
+    thresholds = {
+        "cpu": {"warn": 65, "crit": 80},
+        "ram": {"warn": 70, "crit": 85},
+        "sd": {"warn": 75, "crit": 90},
+    }
+
+    for i, vals in enumerate(test_values, 1):
+        print(f"\nLoop {i}: Werte = {vals}")
+        for sensor, value in vals.items():
+            evaluate_sensor(test_host, sensor, value,
+                            warn=thresholds[sensor]["warn"],
+                            crit=thresholds[sensor]["crit"])
+        print("Timeline aktuell:")
+        for entry in timelines[test_host]:
+            print(entry)
+        print("-" * 50)
+
 if __name__ == "__main__":
+    # Test starten
+    # test_sensor_state_handling()
+
     from threading import Thread
     Thread(target=background_checks, daemon=True).start()
     app.run(host="0.0.0.0", port=PORT, debug=True, use_reloader=False)
