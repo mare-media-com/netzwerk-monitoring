@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# region imports
 import subprocess
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, render_template
@@ -13,14 +14,17 @@ from collections import defaultdict, deque
 import platform
 import requests
 from config import HOSTS, RASPBERRY_THRESHOLDS
+# endregion imports
 
+
+# region settings
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
 
 # =====================
 # PORT AUTOMATISCH BESTIMMEN
 # =====================
-
-# Prüfen, ob wir in einer virtuellen Umgebung arbeiten
+# Prüfen, ob in einer virtuellen Umgebung gearbeitet wird
 # sys.prefix zeigt auf das .venv-Verzeichnis, wenn aktiviert
 if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
     # Lokale Entwicklung in .venv → Port 5001
@@ -37,7 +41,6 @@ print(f"Starte Flask auf Port {PORT} ({'Entwicklung' if IS_DEV else 'Produktiv'}
 # ---------------------
 # PING und Raspberry Hosts
 # ---------------------
-
 PING_HOSTS = [
     host for host, cfg in HOSTS.items()
     if "ping" in cfg.get("types", [])
@@ -47,6 +50,7 @@ RASPBERRY_HOSTS = [
     host for host, cfg in HOSTS.items()
     if "raspberry" in cfg.get("types", [])
 ]
+
 
 # ---------------------
 # IPs, RAM, SD
@@ -67,6 +71,7 @@ TOTAL_SD = {
     for host in RASPBERRY_HOSTS
 }
 
+
 # =====================
 # SYSTEM & PFADE
 # =====================
@@ -77,18 +82,17 @@ if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
 LOG_PATH = os.path.join(LOG_DIR, "monitor.log")
 
+
 # =====================
 # KONFIGURATION
 # =====================
-
 TIMEOUT = 2
 AGENT_TIMEOUT = 90  # Sekunden
 LOCAL_TZ = ZoneInfo("Europe/Berlin")
-
 RAM_CHECK_INTERVAL = 15          # Sekunden
 RAM_TRIGGER_TIME = 300           # 5 Minuten
-
 RAM_TRIGGER_COUNT = RAM_TRIGGER_TIME // RAM_CHECK_INTERVAL
+
 
 # =====================
 # LOGGING
@@ -101,13 +105,12 @@ formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s",
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.info("Logging gestartet")
+sensor_states = {} # speichert aktuellen Status pro Host/Sensor, z.B. "OK", "WARN", "CRITICAL"
+timelines = defaultdict(lambda: deque(maxlen=50))  # speichert die Timeline, max 50 Einträge pro Host
+# endregion settings
 
-# speichert aktuellen Status pro Host/Sensor, z.B. "OK", "WARN", "CRITICAL"
-sensor_states = {}
 
-# speichert die Timeline
-timelines = defaultdict(lambda: deque(maxlen=50))  # max 50 Einträge pro Host
-
+# region status
 # =====================
 # STATUS
 # =====================
@@ -121,7 +124,6 @@ PING_FAIL_THRESHOLD = 3
 
 ram_warn_counter = {}
 ram_crit_counter = {}
-
 
 # Ping Hosts vorbereiten
 for host, cfg in HOSTS.items():
@@ -143,10 +145,14 @@ for host, cfg in HOSTS.items():
             "sd_used": None,
             "sd_total": None            
         }
+# endregion status
 
+
+# region functions
 # =====================
 # HILFSFUNKTIONEN
 # =====================
+
 def ping(host):
     try:
         if IS_WINDOWS:
@@ -278,8 +284,6 @@ def get_log_files():
             return int(name.split(".")[-1])
         except:
             return 0
-
-    # älteste zuerst: höchste Nummer zuerst
     return sorted(files, key=extract_number, reverse=True)
 
 def read_recent_logs(lines=100):
@@ -322,6 +326,7 @@ def read_server_timeline(max_events=15):
                 timeline[server].append({"time": ts_local.strftime("%d.%m.%Y %H:%M:%S"),
                                          "state": state})
     return {server: list(events) for server, events in timeline.items()}
+
 
 # =====================
 # SENSOR STATUS & TIMELINE
@@ -449,9 +454,12 @@ def format_duration(delta):
     s = seconds % 60
 
     return f"{h}h {m}m {s}s"
+# endregion functions
 
+
+# region flask app & routen
 # =====================
-# FLASK APP
+# FLASK APP / Routen
 # =====================
 app = Flask(__name__)
 
@@ -486,6 +494,10 @@ def index():
 
             IS_DEV=IS_DEV
         )
+
+@app.route("/config")
+def get_config():
+    return jsonify(HOSTS)
 
 @app.route("/api/status")
 def api_status():
@@ -589,8 +601,10 @@ def debug():
         "timelines": timelines_combined,
         "thresholds": RASPBERRY_THRESHOLDS
     }
+# endregion routes
 
 
+# region main loop
 # =====================
 # HAUPTSCHLEIFE
 # =====================
@@ -705,10 +719,21 @@ def background_checks():
                         RASPBERRY_THRESHOLDS["sd"]["crit"]
                     )
 
-                except Exception as e:
-                    print(f"{host} fetch error:", e)
+                # except Exception as e:
+                    # print(f"{host} fetch error:", e)
+                except requests.exceptions.RequestException:
+                    # 👉 Host ist offline / nicht erreichbar
+
+                    status[host]["cpu_temp"] = None
+                    status[host]["ram"] = None
+                    status[host]["ram_used"] = None
+                    status[host]["sd"] = None
+                    status[host]["sd_used"] = None
+
+                    # print(f"{host} offline")
 
         time.sleep(30)
+
 
 # =====================
 # TESTFUNKTION FÜR SENSOR-STATE HANDLING
@@ -740,6 +765,10 @@ def test_sensor_state_handling():
             print(entry)
         print("-" * 50)
 
+
+# =====================
+# Aufruf HAUPTSCHLEIFE
+# =====================
 if __name__ == "__main__":
     # Test starten
     # test_sensor_state_handling()
@@ -747,3 +776,4 @@ if __name__ == "__main__":
     from threading import Thread
     Thread(target=background_checks, daemon=True).start()
     app.run(host="0.0.0.0", port=PORT, debug=True, use_reloader=False)
+# endregion main loop

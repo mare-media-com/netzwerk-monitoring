@@ -1,7 +1,7 @@
 # 🌐 Netzwerk-Monitoring Dashboard
 
-Ein leichtgewichtiges, webbasiertes Monitoring-Dashboard für ein Heimnetzwerk auf einem Raspberry Pi.
-Das System überwacht zentrale Netzwerkkomponenten (Internet, Router, Server) und stellt Status, Latenzen, Ausfälle und Systemressourcen weiterer Einheiten in einem übersichtlichen Webinterface dar.
+Ein leichtgewichtiges, webbasiertes Monitoring-Dashboard für ein Heimnetzwerk, das auf einem Raspberry Pi läuft.
+Das System überwacht zentrale Netzwerkkomponenten (Internet, Router, Raspberries) und stellt Status, Latenzen, Ausfälle und Systemressourcen in einem übersichtlichen Webinterface dar.
 
 Das Projekt ist speziell für **Home-Lab-Umgebungen** konzipiert und läuft komplett lokal.
 
@@ -15,7 +15,6 @@ Das Projekt ist speziell für **Home-Lab-Umgebungen** konzipiert und läuft komp
 
   * Internetverbindung
   * FRITZ!Box
-  * Raspberry Pi Server
 * Anzeige der aktuellen Latenz
 * automatische Erkennung von Ausfällen
 
@@ -24,7 +23,6 @@ Das Projekt ist speziell für **Home-Lab-Umgebungen** konzipiert und läuft komp
 * letzter Ausfall mit Startzeit
 * Dauer des Ausfalls
 * Anzahl der Ausfälle
-
   * letzte 24 Stunden
   * letzte 7 Tage
 * Gesamt-Downtime der letzten 7 Tage
@@ -37,11 +35,12 @@ Anzeige von:
 * CPU-Temperatur
 * RAM-Auslastung
 * SD-Card Speicher
+* Status on-/offline
 
 inklusive:
 
 * Gauge-Anzeige für CPU-Temperatur
-* Fortschrittsbalken für RAM und Speicher
+* Fortschrittsbalken der Auslastung für RAM und Speicher
 
 ### Event-Timeline
 

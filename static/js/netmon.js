@@ -1,13 +1,16 @@
 document.addEventListener("DOMContentLoaded", function () {
 
     let hosts = [];
+    let hostConfig = {};
 
     const renderedEvents = {};
     const cpuGauges = {};
 
+
     /* ===================== */
     /* Host-Initialisierung  */
     /* ===================== */
+
     function initHosts(hostList) {
 
         hosts = hostList;
@@ -17,6 +20,19 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         initGauges();
+    }
+
+    function loadConfig() {
+        return fetch("/config")
+            .then(res => res.json())
+            .then(data => {
+                hostConfig = data;
+                console.log("HOST CONFIG:", hostConfig);
+
+                // Hosts initialisieren
+                initHosts(Object.keys(hostConfig));
+            })
+            .catch(err => console.error("Fetch /config failed:", err));
     }
 
     function initGauges() {
@@ -45,9 +61,11 @@ document.addEventListener("DOMContentLoaded", function () {
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
+
     /* ===================== */
     /* UI-Updates            */
     /* ===================== */
+
     function updateCardState(cardId, isOk) {
 
         const card = document.getElementById(cardId);
@@ -105,6 +123,31 @@ document.addEventListener("DOMContentLoaded", function () {
                 Free: ${freeGB.toFixed(2)}GB | Total: ${totalGB.toFixed(2)}GB
             `;
             barEl.style.width = percent + "%";
+        }
+    }
+
+    function showOffline(host) {
+        const card = document.getElementById(host + "Card");
+        if (!card) return;
+
+        let offlineEl = document.getElementById(host + "Offline");
+
+        if (!offlineEl) {
+            offlineEl = document.createElement("div");
+            offlineEl.id = host + "Offline";
+            offlineEl.style.color = "#ff5733";
+            offlineEl.style.fontWeight = "bold";
+            offlineEl.style.marginTop = "10px";
+            offlineEl.innerHTML = "⚠️ Raspberry offline";
+
+            card.appendChild(offlineEl);
+        }
+    }
+
+    function hideOffline(host) {
+        const offlineEl = document.getElementById(host + "Offline");
+        if (offlineEl) {
+            offlineEl.remove();
         }
     }
 
@@ -179,6 +222,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+
     /* ===================== */
     /* Main Update */
     /* ===================== */
@@ -190,8 +234,23 @@ document.addEventListener("DOMContentLoaded", function () {
         hosts.forEach(host => {
 
             // Status OK / FAIL
+            // const server = data.servers?.[host];
+            // const ok = server?.online;
             const server = data.servers?.[host];
-            const ok = server?.online;
+            const rpi = data.raspberries?.[host];
+
+            let ok = null;
+
+            // 1. Ping-basierte Hosts
+            if (server && server.online !== undefined) {
+                ok = server.online;
+            } else if (rpi) {
+                if (rpi.cpu === null) {
+                    ok = false;
+                } else {
+                    ok = true;
+                }
+            }
 
             const statusEl = document.getElementById(host + "Status");
             if (statusEl)
@@ -215,6 +274,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     }
 
+
     /* ===================== */
     /* Fetch-Funktion        */
     /* ===================== */
@@ -227,40 +287,53 @@ document.addEventListener("DOMContentLoaded", function () {
                 const thresholds = data.thresholds;
 
                 hosts.forEach(host => {
-
                     const config = hostConfig[host];
+                    const isRaspberry = config?.types?.includes("raspberry");
+                    const isPing = config?.types?.includes("ping");
                     const rpi = data.raspberries?.[host];
 
-                    if (!rpi) return;
+                    // --- Raspberry-Hosts ---
+                    if (isRaspberry) {
+                        if (!rpi || rpi.cpu == null) {
+                            showOffline(host);
+                            cpuGauges[host]?.refresh(0);
+                        } else {
+                            hideOffline(host);
 
-                    // CPU
-                    if (rpi.cpu != null) {
-                        cpuGauges[host]?.refresh(parseFloat(rpi.cpu));
+                            if (rpi.cpu != null) cpuGauges[host]?.refresh(parseFloat(rpi.cpu));
+
+                            if (rpi.ram_percent != null && rpi.ram_used != null) {
+                                updateRam(
+                                    host,
+                                    rpi.ram_percent,
+                                    rpi.ram_used,
+                                    rpi.ram_total,
+                                    thresholds.ram.warn,
+                                    thresholds.ram.crit
+                                );
+                            }
+
+                            if (rpi.sd_percent != null && rpi.sd_used != null) {
+                                updateSd(
+                                    host,
+                                    rpi.sd_percent,
+                                    rpi.sd_used,
+                                    rpi.sd_total,
+                                    thresholds.sd.warn,
+                                    thresholds.sd.crit
+                                );
+                            }
+                        }
                     }
 
-                    // RAM
-                    if (rpi.ram_percent != null && rpi.ram_used != null) {
-                        updateRam(
-                            host,
-                            rpi.ram_percent,
-                            rpi.ram_used,
-                            rpi.ram_total,
-                            thresholds.ram.warn,
-                            thresholds.ram.crit
-                        );
+                    // --- Ping-Hosts ---
+                    if (isPing) {
+                        const pingValue = data.ping?.[host];
+                        if (pingValue != null) {
+                            updatePingCard(host, pingValue);
+                        }
                     }
 
-                    // SD
-                    if (rpi.sd_percent != null && rpi.sd_used != null) {
-                        updateSd(
-                            host,
-                            rpi.sd_percent,
-                            rpi.sd_used,
-                            rpi.sd_total,
-                            thresholds.sd.warn,
-                            thresholds.sd.crit
-                        );
-                    }
                 });
 
                 updateServerStatus(data);
@@ -268,11 +341,14 @@ document.addEventListener("DOMContentLoaded", function () {
             .catch(err => console.error("Fetch /debug failed:", err));
     }
 
+    
     /* ===================== */
     /* Start: Hosts & Fetch  */
     /* ===================== */
-    initHosts(Object.keys(hostConfig)); // Init Hosts + Gauges
-    fetchStats();                        // Erste Werte laden
-    setInterval(fetchStats, 5000);       // alle 5 Sekunden aktualisieren
+
+    loadConfig().then(() => {
+        fetchStats();
+        setInterval(fetchStats, 5000);
+    });
 
 });
