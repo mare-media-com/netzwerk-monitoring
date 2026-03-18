@@ -210,10 +210,10 @@ def check_raspberry_limits(host, cpu_temp, ram, sd):
 
     if cpu_temp is not None:
         if cpu_temp >= thresholds["cpu"]["crit"]:
-            logger.warning(f"{host.upper()} | CPU_TEMP | CRITICAL | {cpu_temp:.2f}")
+            # logger.warning(f"{host.upper()} | CPU_TEMP | CRITICAL | {cpu_temp:.2f}")
             logger.info(f"SERVER | {host.upper()} | TEMP_CRITICAL")
         elif cpu_temp >= thresholds["cpu"]["warn"]:
-            logger.warning(f"{host.upper()} | CPU_TEMP | HIGH | {cpu_temp:.2f}")
+            # logger.warning(f"{host.upper()} | CPU_TEMP | HIGH | {cpu_temp:.2f}")
             logger.info(f"SERVER | {host.upper()} | TEMP_WARN")
 
     # =====================
@@ -240,14 +240,14 @@ def check_raspberry_limits(host, cpu_temp, ram, sd):
 
     if ram_crit_counter[host] == RAM_TRIGGER_COUNT:
 
-        logger.warning(f"{host.upper()} | RAM | CRITICAL | {ram:.1f}")
+        # logger.warning(f"{host.upper()} | RAM | CRITICAL | {ram:.1f}")
         logger.info(f"SERVER | {host.upper()} | RAM_CRITICAL")
 
         ram_crit_counter[host] = RAM_TRIGGER_COUNT
 
     elif ram_warn_counter[host] == RAM_TRIGGER_COUNT:
 
-        logger.warning(f"{host.upper()} | RAM | HIGH | {ram:.1f}")
+        # logger.warning(f"{host.upper()} | RAM | HIGH | {ram:.1f}")
         logger.info(f"SERVER | {host.upper()} | RAM_WARN")
 
         ram_warn_counter[host] = RAM_TRIGGER_COUNT
@@ -260,12 +260,12 @@ def check_raspberry_limits(host, cpu_temp, ram, sd):
 
         if sd >= thresholds["sd"]["crit"]:
 
-            logger.warning(f"{host.upper()} | SD | CRITICAL | {sd:.2f}")
+            # logger.warning(f"{host.upper()} | SD | CRITICAL | {sd:.2f}")
             logger.info(f"SERVER | {host.upper()} | SD_CRITICAL")
 
         elif sd >= thresholds["sd"]["warn"]:
 
-            logger.warning(f"{host.upper()} | SD | HIGH | {sd:.2f}")
+            # logger.warning(f"{host.upper()} | SD | HIGH | {sd:.2f}")
             logger.info(f"SERVER | {host.upper()} | SD_WARN")
 
 

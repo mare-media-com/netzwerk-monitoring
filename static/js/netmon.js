@@ -71,9 +71,9 @@ document.addEventListener("DOMContentLoaded", function () {
         case "sd_ok": return "💾";
         case "sd_warn": return "💾";
         case "sd_critical": return "💾";
-        case "temp_ok": return "🌡️";
-        case "temp_warn": return "🔥";
-        case "temp_critical": return "🚨";
+        case "temp_ok": return "🔥";
+        case "temp_warn": return "🔥"; /*alt= 🌡️ */
+        case "temp_critical": return "🔥"; /*alt= 🚨 */
         case "offline": return "🔌";
         case "online": return "⚡";
         default: return "ℹ️";
