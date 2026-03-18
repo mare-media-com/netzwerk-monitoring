@@ -61,6 +61,24 @@ document.addEventListener("DOMContentLoaded", function () {
         return str.charAt(0).toUpperCase() + str.slice(1);
     }
 
+    function getEventIcon(type) {
+    switch (type) {
+        case "ok": return "🟢";
+        case "fail": return "🔴";
+        case "ram_ok": return "🧠";
+        case "ram_warn": return "🧠";
+        case "ram_critical": return "🧠";
+        case "sd_ok": return "💾";
+        case "sd_warn": return "💾";
+        case "sd_critical": return "💾";
+        case "temp_ok": return "🌡️";
+        case "temp_warn": return "🔥";
+        case "temp_critical": return "🚨";
+        case "offline": return "🔌";
+        case "online": return "⚡";
+        default: return "ℹ️";
+    }
+}
 
     /* ===================== */
     /* UI-Updates            */
@@ -213,10 +231,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
             renderedEvents[key].add(eventId);
 
+            const icon = getEventIcon(event.state.toLowerCase());
             const div = document.createElement("div");
             div.className = `event ${event.state.toLowerCase()} new-event`;
 
-            div.innerHTML = `${event.time} | ${event.state}`;
+            div.innerHTML = `${icon} ${event.time} | ${event.state}`;
 
             el.prepend(div); // NEUE EVENTS OBEN ⭐
         });
@@ -234,8 +253,6 @@ document.addEventListener("DOMContentLoaded", function () {
         hosts.forEach(host => {
 
             // Status OK / FAIL
-            // const server = data.servers?.[host];
-            // const ok = server?.online;
             const server = data.servers?.[host];
             const rpi = data.raspberries?.[host];
 

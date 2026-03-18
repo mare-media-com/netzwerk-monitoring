@@ -341,9 +341,10 @@ def update_sensor_state(host, sensor, new_state):
 
     if new_state != old_state:
         timelines[host].append({
-            "time": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
+            "time": datetime.now().strftime("%d.%m.%Y %H:%M:%S.%f")[:-3],
             "state": f"{sensor.upper()}_{new_state}"
         })
+        logger.info(f"SERVER | {host.upper()} | {sensor.upper()}_{new_state}")
         sensor_states[host][sensor] = new_state
         print(f"Timeline aktualisiert: {host} | {sensor.upper()} -> {new_state}")
 
@@ -587,9 +588,8 @@ def debug():
     timelines_combined = {}
     for host in HOSTS:
         server_events = server_timeline.get(host.upper(), [])
-        sensor_events = list(timelines.get(host, []))
-        timelines_combined[host] = server_events + sensor_events
-
+        timelines_combined[host] = server_events
+    
     # =====================
     # RÜCKGABE ALS JSON
     # =====================
@@ -719,8 +719,6 @@ def background_checks():
                         RASPBERRY_THRESHOLDS["sd"]["crit"]
                     )
 
-                # except Exception as e:
-                    # print(f"{host} fetch error:", e)
                 except requests.exceptions.RequestException:
                     # 👉 Host ist offline / nicht erreichbar
 
@@ -729,8 +727,6 @@ def background_checks():
                     status[host]["ram_used"] = None
                     status[host]["sd"] = None
                     status[host]["sd_used"] = None
-
-                    # print(f"{host} offline")
 
         time.sleep(30)
 

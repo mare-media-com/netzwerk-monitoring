@@ -104,6 +104,10 @@ label {
     color: #ff5733;   /* ROT */
 }
 
+.event.ram_ok {
+    color: #8ae234; /* grün */
+}
+
 .event.ram_warn {
     color: #ffc107;   /* GELB */
 }
@@ -112,12 +116,20 @@ label {
     color: #ff5733;   /* ROT */
 }
 
+.event.sd_ok {
+    color: #8ae234; /* grün */
+}
+
 .event.sd_warn {
     color: #ffc107;   /* GELB */
 }
 
 .event.temp_critical {
     color: #ff5733;   /* ROT */
+}
+
+.event.temp_ok {
+    color: #8ae234; /* grün */
 }
 
 .event.temp_warn {
