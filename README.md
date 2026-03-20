@@ -1,7 +1,7 @@
 # 🌐 Netzwerk-Monitoring Dashboard
 
-Ein leichtgewichtiges, webbasiertes Monitoring-Dashboard für ein Heimnetzwerk auf einem Raspberry Pi.
-Das System überwacht zentrale Netzwerkkomponenten (Internet, Router, Server) und stellt Status, Latenzen, Ausfälle und Systemressourcen in einem übersichtlichen Webinterface dar.
+Ein leichtgewichtiges, webbasiertes Monitoring-Dashboard für ein Heimnetzwerk, das auf einem Raspberry Pi läuft.
+Das System überwacht zentrale Netzwerkkomponenten (Internet, Router, Raspberries) und stellt Status, Latenzen, Ausfälle und Systemressourcen in einem übersichtlichen Webinterface dar.
 
 Das Projekt ist speziell für **Home-Lab-Umgebungen** konzipiert und läuft komplett lokal.
 
@@ -15,7 +15,6 @@ Das Projekt ist speziell für **Home-Lab-Umgebungen** konzipiert und läuft komp
 
   * Internetverbindung
   * FRITZ!Box
-  * Raspberry Pi Server
 * Anzeige der aktuellen Latenz
 * automatische Erkennung von Ausfällen
 
@@ -24,7 +23,6 @@ Das Projekt ist speziell für **Home-Lab-Umgebungen** konzipiert und läuft komp
 * letzter Ausfall mit Startzeit
 * Dauer des Ausfalls
 * Anzahl der Ausfälle
-
   * letzte 24 Stunden
   * letzte 7 Tage
 * Gesamt-Downtime der letzten 7 Tage
@@ -37,11 +35,12 @@ Anzeige von:
 * CPU-Temperatur
 * RAM-Auslastung
 * SD-Card Speicher
+* Status on-/offline
 
 inklusive:
 
 * Gauge-Anzeige für CPU-Temperatur
-* Fortschrittsbalken für RAM und Speicher
+* Fortschrittsbalken der Auslastung für RAM und Speicher
 
 ### Event-Timeline
 
@@ -66,10 +65,6 @@ Das Webinterface aktualisiert sich automatisch:
 
 ohne Seiten-Reload.
 
----
-
-# 🖥 Beispiel Dashboard
-
 Das Dashboard zeigt:
 
 * Netzwerkstatus
@@ -87,6 +82,11 @@ Alle Daten werden lokal verarbeitet und im Browser dargestellt.
 Raspberry Pi
 │
 ├── server.py
+├── config.py
+├── docker-compose.yml
+├── Dockerfile
+├── requirements.txt
+├── README.md
 │
 ├── logs/
 │   ├── monitor.log
@@ -96,6 +96,10 @@ Raspberry Pi
 ├── static/
 │   ├── style.css
 │   └── favicon.png
+│   └── config/
+│       └── secrets.js
+│   └── js/
+│       └── mqtt.js
 │
 └── templates/
     └── index.html
@@ -122,8 +126,8 @@ Raspberry Pi
 ## Repository klonen
 
 ```
-git clone https://github.com/USERNAME/netzwerk-monitoring.git
-cd netzwerk-monitoring
+git clone https://github.com/mare-media-com/netzwerk-monitoring.git
+cd <netzwerk-monitoring>/server
 ```
 
 ---
@@ -136,32 +140,94 @@ pip install -r requirements.txt
 
 ---
 
-## Datei secrets.js
+## Individualisierung
+
+### Datei secrets.js
 
 ```
-/static/config/secrets.example
-secrets.example umbenennen in secrets.js
+/static/config/secrets.example kopieren/umbenennen in: secrets.js
 MQTT-IP und MQTT-Port eintragen
 ```
 
 ---
 
-## 3️⃣ Server starten
+### Datei config.py
+
+```
+/config.example kopieren/umbenennen in: config.py
+Daten der zu überwachenden Einheiten eintragen
+```
+
+---
+
+### Logrotate einrichten
+
+Falls noch nicht vorhanden:
+```
+sudo apt install logrotate
+```
+
+Logrotate-Konfiguration erstellen:
+```
+sudo nano /etc/logrotate.d/netzwerk-monitor
+```
+
+Beispielkonfiguration:
+```
+/home/<user>/netzwerk-monitor/server/logs/monitor.log {
+    weekly
+    rotate 4
+    missingok
+    notifempty
+    copytruncate
+}
+```
+Nach der Rotation sieht das Verzeichnis z. B. so aus:
+```
+monitor.log
+monitor.log.1
+monitor.log.2
+monitor.log.3
+monitor.log.4
+```
+monitor.log → aktuelles Logfile
+.1 → neuestes Archiv
+.4 → ältestes Archiv (wird beim nächsten Lauf gelöscht)
+
+logrotate wird automatisch über einen System-Timer bzw. Cronjob ausgeführt:
+```
+/etc/cron.daily/logrotate
+```
+Dadurch erfolgt die Prüfung einmal täglich, und wenn die Bedingungen erfüllt sind (z. B. weekly), wird rotiert.
+
+Zum Testen kann die Rotation manuell ausgelöst werden:
+```
+sudo logrotate -f /etc/logrotate.d/netzwerk-monitor
+```
+---
+
+## Server starten
 
 ```
 python3 server.py
+
+oder
+
+Docker-Container erstellen und starten
 ```
 
 Das Dashboard ist anschließend erreichbar unter:
 
-```
-http://localhost:5000
-```
-
-oder im Netzwerk z.B.:
+Entwicklungsumgebung (.venv)
 
 ```
-http://raspberrypi:5000
+http://localhost:5001
+```
+
+oder Produktiv im Netzwerk z.B.:
+
+```
+http://<raspberrypi>:5000
 ```
 
 ---

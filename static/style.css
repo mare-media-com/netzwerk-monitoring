@@ -5,15 +5,11 @@ body {
     padding: 20px;
 }
 
-h1, h2 {
-    color: #6cf;
-}
-
 h1 {
+    color: #6cf;
     margin-bottom: 20px;
 }
 
-/* Überschrift und MQTT-Werte nebeneinander */
 h1.header {
   display: flex;
   align-items: center; /* vertikale Ausrichtung */
@@ -22,51 +18,16 @@ h1.header {
   margin-bottom: 20px;
 }
 
-.mqtt-values {
-  display: flex;
-  gap: 15px;
-  font-size: 0.7em;
-  padding: 5px 25px;
-  background-color: #1a1a1a;
-  border-radius: 10px;
-}
-
-.status-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: 12px;
-}
-
-.status-led {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background-color: grey;
-  display: inline-block;
-  box-shadow: 0 0 4px rgba(0,0,0,0.4);
-}
-
-.led-green {
-  background-color: #2ecc71;
-}
-
-.led-red {
-  background-color: #e74c3c;
-}
-
-.led-blue {
-  background-color: #3498db;
-}
-
 h2 {
+    color: #6cf;
     margin-top: 40px;
 }
 
 label {
-    margin-left: -5px;
+    margin-left: 0px;
     font-weight: bold;
 }
+
 
 .card {
     background: #1a1a1a;
@@ -105,16 +66,118 @@ label {
     font-size: 0.9em;
 }
 
-.stats {
-    margin-top: 8px;
-    border-top: 1px solid rgba(255,255,255,0.08);
-    padding-top: 6px;
+.card small.muted {
+    line-height: 1.3em;
 }
 
-.status-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 15px;
+.card small.muted br {
+    content: "";
+    margin-bottom: 2px;
+}
+
+.duration {
+    display: block;
+    margin-top: 2px;
+}
+
+.event {
+    font-family: monospace;
+/*     padding: 4px 0; */
+    border-bottom: 1px solid #222;
+    font-size: 1.0em;
+    padding: 2px 4px;
+}
+
+.event:last-child {
+    border-bottom: none;
+}
+
+.event.fail {
+    color: #ef2929;   /* rot */
+}
+
+.event.ok {
+    color: #8ae234;   /* grün */
+}
+
+.event.ram_critical {
+    color: #ff5733;   /* ROT */
+}
+
+.event.ram_ok {
+    color: #8ae234; /* grün */
+}
+
+.event.ram_warn {
+    color: #ffc107;   /* GELB */
+}
+
+.event.sd_critical {
+    color: #ff5733;   /* ROT */
+}
+
+.event.sd_ok {
+    color: #8ae234; /* grün */
+}
+
+.event.sd_warn {
+    color: #ffc107;   /* GELB */
+}
+
+.event.temp_critical {
+    color: #ff5733;   /* ROT */
+}
+
+.event.temp_ok {
+    color: #8ae234; /* grün */
+}
+
+.event.temp_warn {
+    color: #ffc107;   /* GELB */
+}
+
+.fail {
+    color: #e74c3c;
+}
+
+.latency {
+    font-weight: bold;
+}
+
+.latency.green {
+    color: #33ff57; 
+}
+
+.latency.yellow {
+    color: #ffcc33; 
+}
+
+.latency.red {
+    color: #ff5733; 
+}
+
+.mqtt-valueblock {
+  display: flex;
+  gap: 15px;
+  font-size: 0.7em;
+  padding: 5px 25px;
+  background-color: #1a1a1a;
+  border-radius: 10px;
+}
+
+.mqtt-values {
+    color:#fff;
+    /* font-family: monospace; */
+    /* font-weight: 600; */
+}
+
+.muted {
+    color: #aaa;
+    font-size: 1.0em;
+}
+
+.ok {
+    color: #2ecc71;
 }
 
 .progress {
@@ -139,6 +202,16 @@ label {
     font-size: 12px;
 }
 
+.rpi-data {
+    color: #aaa;
+}
+
+.stats {
+    margin-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 6px;
+}
+
 .status-dot {
     display: inline-block;
     width: 10px;
@@ -148,93 +221,65 @@ label {
     margin-left: 4px;
 }
 
-/* Online / Warn / Offline Text */
-.ok {
-    color: #2ecc71;
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
 }
 
-.fail {
-    color: #e74c3c;
+.status-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
 }
 
-.warn {
-    color: #f0c674;
+.status-led {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: grey;
+  display: inline-block;
+  box-shadow: 0 0 4px rgba(0,0,0,0.4);
 }
 
-/* ------------------------
-   Logs / Timeline
-   ------------------------ */
-.muted {
-    color: #aaa;
-    font-size: 1.0em;
+.status-led.led-green {
+  background-color: #2ecc71;
+}
+
+.status-led.led-red {
+  background-color: #e74c3c;
+}
+
+.status-led.led-blue {
+  background-color: #3498db;
 }
 
 .statusanzeige {
     font-size: 1.2em;
 }
-.duration {
-    display: block;
-    margin-top: 2px;
+
+.test-banner {
+    background-color: #ffcc00;   /* auffälliges Gelb */
+    color: #000;                 /* schwarzer Text */
+    font-weight: bold;
+    text-align: center;
+    padding: 5px 20px;
+    border-bottom: 2px solid #ff9900;
+    font-size: 1.0rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1000;
 }
 
-/* Timeline */
 .timeline {
     margin-top: 6px;
     background: #000;
     padding: 10px;
     border-left: 3px solid #6cf;
-    max-height: 370px;
+    max-height: 340px;
     overflow-y: auto;
 }
 
-.event {
-    font-family: monospace;
-/*     padding: 4px 0; */
-    border-bottom: 1px solid #222;
-    font-size: 1.0em;
-    padding: 2px 4px;
+.warn {
+    color: #f0c674;
 }
-
-.event:last-child {
-    border-bottom: none;
-}
-
-.event.ok {
-    color: #8ae234;   /* grün */
-}
-
-.event.fail {
-    color: #ef2929;   /* rot */
-}
-
-.event.ram_warn {
-    color: #ffc107;   /* GELB */
-}
-
-.event.ram_critical {
-    color: #ff5733;   /* ROT */
-}
-
-/* ------------------------
-   Zusatz: Einheitlicher Ausfallbereich
-   ------------------------ */
-.card small.muted {
-    line-height: 1.3em;
-}
-
-.card small.muted br {
-    content: "";
-    margin-bottom: 2px;
-}
-
-/* Latenzfarben */
-.latency {
-    font-weight: bold;
-}
-
-.latency.green {
-    color: #33ff57; }
-.latency.yellow {
-    color: #ffcc33; }
-.latency.red {
-    color: #ff5733; }

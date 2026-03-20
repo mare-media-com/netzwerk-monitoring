@@ -14,8 +14,7 @@ COPY requirements.txt .
 # Python-Pakete installieren
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Restliche App kopieren
-COPY server.py .
+# Restliche App wird per Volume gemountet
 
 EXPOSE 5000
 

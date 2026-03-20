@@ -29,3 +29,4 @@ Thumbs.db
 # config-Daten
 # =========================
 /static/config/secrets.js
+config.py
