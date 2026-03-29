@@ -630,19 +630,26 @@ def background_checks():
                 continue
 
             # Status setzen
-            status["server"][host] = ok
-            status["server"][f"{host}_latency"] = latency
+            # status["server"][host] = ok
+            # status["server"][f"{host}_latency"] = latency
 
-            # Ping-Fail-Counter erhöhen, falls fehlgeschlagen
-            if not ok:
-                ping_fail_counter[host] += 1
-                if ping_fail_counter[host] >= PING_FAIL_THRESHOLD:
-                    status["server"][host] = False
-                    status["server"][f"{host}_latency"] = None
-                    log_change("SERVER", host.upper(), old_state, False)
-            else:
-                ping_fail_counter[host] = 0
-                log_change("SERVER", host.upper(), old_state, ok)
+            # # Ping-Fail-Counter erhöhen, falls fehlgeschlagen
+            # if not ok:
+            #     ping_fail_counter[host] += 1
+            #     if ping_fail_counter[host] >= PING_FAIL_THRESHOLD:
+            #         status["server"][host] = False
+            #         status["server"][f"{host}_latency"] = None
+            #         log_change("SERVER", host.upper(), old_state, False)
+            # else:
+            #     ping_fail_counter[host] = 0
+            #     log_change("SERVER", host.upper(), old_state, ok)
+            new_state = ok
+
+            if old_state != new_state:
+                log_change("SERVER", host.upper(), old_state, new_state)
+
+            status["server"][host] = new_state
+            status["server"][f"{host}_latency"] = latency if new_state else None
 
         # =====================
         # RASPBERRY STATS
